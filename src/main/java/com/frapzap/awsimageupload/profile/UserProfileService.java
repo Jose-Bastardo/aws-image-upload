@@ -1,10 +1,10 @@
 package com.frapzap.awsimageupload.profile;
 
-import com.frapzap.awsimageupload.bucket.BucketName;
 import com.frapzap.awsimageupload.filestore.FileStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import io.github.cdimascio.dotenv.Dotenv;
 
 import java.io.IOException;
 import java.util.*;
@@ -42,7 +42,8 @@ public class UserProfileService {
         Map<String, String> metadata = extractMetaData(file);
 
         // 5. Store the image in s3 and update database with s3 image link
-        String path = String.format("%s/%s", BucketName.PROFILE_IMAGE.getBucketName(), user.getUserProfileId());
+        Dotenv dotenv = Dotenv.load();
+        String path = String.format("%s/%s", dotenv.get("AWS_S3_BUCKET_NAME"), user.getUserProfileId());
         String filename = String.format("%s-%s", file.getOriginalFilename(), UUID.randomUUID());
         try {
             fileStore.save(path, filename, Optional.of(metadata), file.getInputStream());
@@ -53,9 +54,10 @@ public class UserProfileService {
     }
 
     public byte[] downloadUserProfileImage(UUID userProfileId) {
+        Dotenv dotenv = Dotenv.load();
         UserProfile user = getUserProfileorThrow(userProfileId);
         String path = String.format("%s/%s",
-                BucketName.PROFILE_IMAGE.getBucketName(),
+                dotenv.get("AWS_S3_BUCKET_NAME"),
                 user.getUserProfileId());
         return user.getUserProfileImgLink()
                 .map(key -> fileStore.download(path, key))
